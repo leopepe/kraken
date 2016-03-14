@@ -1,7 +1,7 @@
 import click
 from kraken import ec2
 from kraken import ebs
-
+import json
 
 ec2_client = ec2.EC2()
 ebs_client = ebs.EBS()
@@ -23,58 +23,68 @@ def ec2():
 
 @ec2.command('ls')
 @click.option('--debug', '-d', help='Enables debug mode')
-@click.option('--state', '-s', nargs=1, default='stopped')
-@click.option('--filters', '-f', multiple=True)
-def ec2_ls(state, debug, filters):
+@click.option('--state', '-s', nargs=1, default=None)
+@click.option('--filters', '-f', multiple=False, type=str, default=None)
+@click.option('--exclude', '-e', multiple=False, type=str, default=None)
+def ec2_ls(state, debug, filters, exclude):
     """ List EC2 instances
 
         format: [{'InstanceId': 'i-88dea039', 'State': 'stopped', 'Type': 't2.micro', 'StartedAt': '2015-12-31 21:58:10', 'VpcId': 'vpc-b0d602d4'}]
 
     """
     # setting instances
-    instances = ec2_client.list(state=state)
-
-    if debug:
-        click.echo('[DEBUG]')
-        click.echo('State: {0], Debug: {1}'.format(state, debug))
-
-    if filters:
-        instances = ec2_client.list(state=state, filters=filters)
-        click.echo(instances)
-    else:
-        click.echo(instances)
+    instances = ec2_client.list(state=state, exclude=exclude, filters=filters)
+    click.echo(json.dumps(instances, ensure_ascii=False, indent=2))
 
 
 @ec2.command('rm')
-@click.option('--all', '-a', type=bool, default=False, help='Delete all stopped instances')
-@click.option('--ids', help='List of running instances ids to be deleted')
-def ec2_rm(ids, all):
+@click.option('--ids', '-i', type=str, help='List of running instances ids to be stopped')
+@click.option('--all/--not-all', default=False, help='Terminate all instances running')
+@click.option('--exclude', '-e', default=False, type=str, help='The list of ids must be separated by one white space')
+def ec2_rm(ids, all, exclude):
     """ Terminate ec2 instances.
 
-    :param ids:
+    :param ids: list of ids to terminate
+    :param exclude:
+    :param all:
     """
-    if all:
-        ids = ec2_client.list(state='stopped')
-        ec2_client.terminate(ids=ids)
-
-    ec2_client.terminate(ids=ids)
+    if ids:
+        result = ec2_client.terminate(ids)
+        click.echo('Termination result:\n {}'.format(result))
+    else:
+        instances = ec2_client.list(state='stopped', exclude=exclude)
+        ids = [
+            instance['InstanceId']
+            for instance in instances
+        ]
+        result = ec2_client.terminate(ids)
+        click.echo('Termination result: {}'.format(result))
 
 
 @ec2.command('stop')
-@click.option('--ids', type=list, help='List of running instances ids to be stopped')
-@click.option('--all', type=bool, default=False, help='Stop all instances running')
-def ec2_stop(ids, all):
+@click.option('--ids', '-i', type=str, help='List of running instances ids to be stopped')
+@click.option('--all/--not-all', default=False, help='Stop all instances running')
+@click.option('--exclude', '-e', default=False, type=str, help='The list of ids must be separated by one white space')
+def ec2_stop(ids, all, exclude):
     """ Stop ec2 instance
 
-    :param:
-    :rtype:
-    :return:
+    :param: ids:
+    :param: all:
+    :param: exclude: list of excluded ids
+    :rtype: str
+    :return: String containing the result of the instances stop
     """
-    if all:
-        pass
+    if ids:
+        result = ec2_client.stop(ids)
+        click.echo('Stop result:\n {}'.format(result))
     else:
-        click.echo('Stopping ids: {}'.format(ids))
-        ec2_client.stop(ids=ids)
+        instances = ec2_client.list(state='running', exclude=exclude)
+        ids = [
+            instance['InstanceId']
+            for instance in instances
+        ]
+        result = ec2_client.stop(ids)
+        click.echo('Stop result: {}'.format(result))
 
 
 @cli.group()
@@ -92,11 +102,11 @@ def ebs_describe(ids):
 
 
 @ebs.command('ls')
-@click.option('--available', default=False)
+@click.option('--available', type=bool, default=False)
 def ebs_ls(available):
     """ List EBS volumes. """
     if available:
-        click.echo('ebs ls experimental')
+        click.echo('listing all available volumes')
         return [volumes for volumes in ebs_client.get_available_volumes()]
     else:
         click.echo('listing all volumes')

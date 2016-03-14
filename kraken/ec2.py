@@ -8,19 +8,26 @@ class EC2Error(RuntimeError):
     pass
 
 
+class TerminationError(EC2Error):
+    """ EC2 Instance Termination status fail
+
+    """
+    pass
+
+
 class EC2:
     """ EC2 Client Class
 
     """
 
-    def __init__(self, region_name=None, profile_name=None):
+    def __init__(self, region_name: str=None, profile_name: str=None):
         # default region us-east-1 virginia
         if region_name is None:
             self._region_name = 'us-east-1'
         else:
             self._region_name = region_name
 
-        if profile_name is not None:
+        if profile_name:
             self._session = boto3.session.Session(region_name=self._region_name, profile_name=profile_name)
         else:
             self._session = boto3.session.Session(region_name=self._region_name)
@@ -36,46 +43,144 @@ class EC2:
     def profile_name(self):
         return self._session.profile_name
 
-    def list(self, filters: list = None, state: str = '') -> list:
-        """ List instances within a specific state
+    def list(self, filters: str = None, state: str = None, exclude: str = None) -> list:
+        """ List instances within a specific state, filter or exclude item
 
         :type state: str
         :param state: possible states: running, stopped
+        :param filters: a literal dict as a string
+        :param exclude: list of excluded id's
         :return: collection of ec2 instances
         :rtype: list
         """
         date_format = '%Y-%m-%d %H:%M:%S'
+        self.instances = self.ec2.instances.all()
 
-        try:
-            self.instances = self.ec2.instances.filter(
-                Filters=[
-                    {'Name': 'instance-state-name', 'Values': [state]}
-                ]
-            )
-            if filters:
-                print(filters)
-                filtered_list = []
-                for d in self.instances:
-                    print(d)
-                    for k, v in d.items():
-                        print(k, v)
-                        if k in filters:
-                            filtered_list.append(v)
-                return filtered_list
+        def __all_instances():
+            # all instances without filtering
+            self.instances = [
+                {
+                    'InstanceId': instance.id,
+                    'State': instance.state['Name'],
+                    'Type': instance.instance_type,
+                    'VpcId': instance.vpc_id,
+                    'KeyName': instance.key_name,
+                    'Tags': instance.tags,
+                    'StartedAt': instance.launch_time.strftime(date_format)
+                }
+                for instance in self.instances
+            ]
 
-            # use list comprehension to generate a collection of instances
+        if state:
+            try:
+                self.instances = self.instances.filter(Filters=[{'Name': 'instance-state-name', 'Values': [state]}])
+            except IOError as e:
+                raise EC2Error('Error listing instances by state {0} {1}'.format(state, e))
+
+        if filters:
+            try:
+                if not self.instances:
+                    self.instances = self.ec2.instances.all()
+
+                self.instances = self.instances.filter(Filters=filters)
+            except IOError as e:
+                raise EC2Error('Error listing instances with filters {0} {1}'.format(filters, e))
+
+        if exclude:
+            instances = []
+            for i in self.instances:
+                if i.id not in exclude:
+                    instances.append(i)
             return [
                 {
                     'InstanceId': instance.id,
                     'State': instance.state['Name'],
                     'Type': instance.instance_type,
                     'VpcId': instance.vpc_id,
+                    'KeyName': instance.key_name,
+                    'Tags': instance.tags,
+                    'StartedAt': instance.launch_time.strftime(date_format)
+                }
+                for instance in instances
+            ]
+        else:
+            return [
+                {
+                    'InstanceId': instance.id,
+                    'State': instance.state['Name'],
+                    'Type': instance.instance_type,
+                    'VpcId': instance.vpc_id,
+                    'KeyName': instance.key_name,
+                    'Tags': instance.tags,
                     'StartedAt': instance.launch_time.strftime(date_format)
                 }
                 for instance in self.instances
             ]
+
+
+        """
+        def __dictify(**kwargs):
+            state = kwargs.get('state', None)
+            filters = kwargs.get('filters', None)
+            exclude = kwargs.get('exclude', None)
+            if state:
+                filtered_instances = self.instances.filter(Filters=[{'Name': 'instance-state-name', 'Values': [state]}])
+                return [
+                            {
+                                'InstanceId': instance.id,
+                                'State': instance.state['Name'],
+                                'Type': instance.instance_type,
+                                'VpcId': instance.vpc_id,
+                                'KeyName': instance.key_name,
+                                'Tags': instance.tags,
+                                'StartedAt': instance.launch_time.strftime(date_format)
+                            }
+                            for instance in filtered_instances
+                ]
+            if exclude:
+                pass
+
+        try:
+            # in case there's no filters return _all
+            if not filters and not state:
+                return _all
+
+            # in case of state is set
+            if state:
+                # use list comprehension to generate a collection of instances
+                return [
+                    {
+                        'InstanceId': instance.id,
+                        'State': instance.state['Name'],
+                        'Type': instance.instance_type,
+                        'VpcId': instance.vpc_id,
+                        'KeyName': instance.key_name,
+                        'Tags': instance.tags,
+                        'StartedAt': instance.launch_time.strftime(date_format)
+                    }
+                    if instance.id != exclude else {'InstanceId': None}
+                    for instance in self.instances
+                ]
+
+            if filters:
+                instances = self.instances.filter(Filters=filters)
+                # use list comprehension to generate a collection of instances
+                return [
+                    {
+                        'InstanceId': instance.id,
+                        'State': instance.state['Name'],
+                        'Type': instance.instance_type,
+                        'VpcId': instance.vpc_id,
+                        'KeyName': instance.key_name,
+                        'Tags': instance.tags,
+                        'StartedAt': instance.launch_time.strftime(date_format)
+                    }
+                    if instance.id != exclude
+                    for instance in instances
+                ]
         except IOError as e:
             raise EC2Error('Error accessing instances {}'.format(e))
+        """
 
     def describe(self):
         pass
@@ -90,24 +195,42 @@ class EC2:
         :rtype: str
         :return: list
         """
+        # If no ids are passed raise Nothing to do
+        if 'None' in ids:
+            raise EC2Error('Nothing to do. Need IDS! Arrgh!!!')
+
         try:
             status = self.ec2.instances.filter(InstanceIds=ids).stop()
             return status
         except IOError as e:
             raise EC2Error('Error stopping EC2 Instances {}'.format(e))
 
-    def terminate(self, ids: list) -> str:
+    def terminate(self, ids: list, exclude: list = None) -> str:
         """ Terminate instances based on a list of ids
 
         :param ids:
         :return:
         :rtype: str
         """
-        try:
-            status = self.ec2.instances.filter(InstanceIds=ids).terminate()
-            return "Terminated status: {0}, instances:\n {1}".format(ids, status)
-        except IOError as e:
-            raise EC2Error('Error terminating EC2 Instances {}'.format(e))
+        if exclude is None:
+            try:
+
+                status = self.ec2.instances.filter(InstanceIds=ids).terminate()
+                return "Terminated status: {0}, instances:\n {1}".format(ids, status)
+            except IOError as e:
+                raise EC2Error('Error terminating EC2 Instances {}'.format(e))
+        else:
+            #filtered_ids = list(set(ids) - set(exclude))
+            try:
+                # status = self.ec2.instances.filter(InstanceIds=filtered_ids).terminate()
+                status = self.instances = self.ec2.instances.filter(
+                            Filters=[
+                                {'Name': 'instance-state-name', 'Values': [state]}
+                            ]
+                        )
+                return "Terminated status: {0}, instances:\n {1}".format(filtered_ids, status)
+            except IOError as e:
+                raise EC2Error('Error terminating EC2 Instances {}'.format(e))
 
 
 if __name__ == '__main__':

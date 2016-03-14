@@ -1,5 +1,4 @@
 # Kraken
-![Logo](http://ih1.redbubble.net/image.82903223.6773/sticker,220x200-pad,220x200,ffffff.u4.jpg)
 
 An AWS CLI for destructive operations. Kraken can terminate all ec2 instances, available ebs volumes and old snapshots.
 
@@ -29,6 +28,8 @@ After the docker image creation the container can be started.
 
 ## Usage
 
+### List stopped ec2 instances:
+
 ```
 $ docker run \
   --rm \
@@ -37,6 +38,29 @@ $ docker run \
   -e "AWS_DEFAULT_REGION=us-east-1" \
   -it \
   kraken:1.2.0 \
-  python3 -m kraken ec2 ls --state=stopped 
+  ec2 ls --state=stopped
 ```
 
+### General help:
+
+```
+$ docker run \
+  --rm \
+  -e "AWS_ACCESS_KEY_ID=BLABLABLA" \
+  -e "AWS_SECRET_KE=TRALALA" \
+  -e "AWS_DEFAULT_REGION=us-east-1" \
+  -it \
+  kraken:1.2.0 --help
+```
+
+### Sub-Command and command help:
+
+```
+$ docker run \
+  --rm \
+  -e "AWS_ACCESS_KEY_ID=BLABLABLA" \
+  -e "AWS_SECRET_KE=TRALALA" \
+  -e "AWS_DEFAULT_REGION=us-east-1" \
+  -it \
+  kraken:1.2.0 ec2 --help
+```

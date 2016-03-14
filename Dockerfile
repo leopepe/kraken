@@ -6,5 +6,5 @@ COPY ./kraken /app/kraken
 COPY ./packages /app/packages
 ENV PYTHONPATH /app/packages
 WORKDIR /app
-CMD ["python3", "-m", "/app/kraken"]
+ENTRYPOINT ["python3", "-m", "kraken"]
 
