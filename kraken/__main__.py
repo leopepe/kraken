@@ -1,6 +1,6 @@
 import click
-from kraken import ec2
-from kraken import ebs
+from .ec2 import ec2
+from .ebs import ebs
 import json
 
 ec2_client = ec2.EC2()
@@ -106,29 +106,21 @@ def ebs_describe(ids):
 def ebs_ls(available):
     """ List EBS volumes. """
     if available:
-        click.echo('listing all available volumes')
-        return [volumes for volumes in ebs_client.get_available_volumes()]
+        available = ebs_client.get_available_volumes()
+        click.echo('All available volumes: {}'.format(available))
     else:
-        click.echo('listing all volumes')
-        return [volumes for volumes in ebs_client.get_all_volumes()]
+        all_volumes = ebs_client.get_all_volumes()
+        click.echo('All volumes: {}'.format(all_volumes))
 
 
 @ebs.command('rm')
 @click.option('--state', default='available')
 def ebs_rm(state):
-    available_volumes = ebs_client.get_available_volumes()
-    deleted_volumes = []
-    candidate_volumes = [
-        volume
-        for volume in available_volumes
-        if ebs_client.is_candidate(volume.volume_id)
-    ]
-    # delete the unused volumes
-    # WARNING -- THIS DELETES DATA
-    for candidate in candidate_volumes:
-        # logging
-        candidate.delete()
-        deleted_volumes.append(candidate)
+    terminated = ebs_client.terminate_candidates()
+    if terminated:
+        click.echo('Ye ebs volumes deleted!')
+    else:
+        click.echo('ARR! Error deleting volumes!')
 
 
 if __name__ == '__main__':

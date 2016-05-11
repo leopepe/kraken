@@ -1,4 +1,4 @@
-from . import ec2
+from kraken import ec2
 
 
 def main():

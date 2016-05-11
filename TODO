@@ -1,9 +1,7 @@
 # EC2
 
-- improve cli help text
 - create unit tests
 
 # EBS
 
-- test ebs
 - create unit tests

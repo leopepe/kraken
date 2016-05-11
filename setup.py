@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
+from kraken import __version__ as version
 
 setup(
     name='kraken',
-    version='1.2.0',
+    version=version.__version__,
     py_modules=['kraken'],
     packages=find_packages(),
     url='bitbucket.org/leopepe/kraken',

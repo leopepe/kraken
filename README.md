@@ -64,3 +64,7 @@ $ docker run \
   -it \
   kraken:1.2.0 ec2 --help
 ```
+
+### TODO
+
+- List / Destroy by tag: # ec2.filter(Filters=[{'Name': 'tag:Name', 'Values': [tag]}])
