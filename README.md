@@ -1,5 +1,7 @@
 # Kraken
 
+![Logo](http://ih1.redbubble.net/image.82903223.6773/sticker,220x200-pad,220x200,ffffff.u4.jpg)
+
 An AWS CLI for destructive operations. Kraken can terminate all ec2 instances, available ebs volumes and old snapshots.
 
 **Author: Leonardo Pepe de Freitas**
