@@ -1,4 +1,6 @@
-PHONY: all
+.PHONY: all
+
+all: virtualenv install
 
 virtualenv:
 	virtualenv -p python3.5 venv/
@@ -9,6 +11,11 @@ install:
 docker:
 	docker run --rm -v $(shell pwd):/worker -w /worker iron/python:3-dev pip install -t packages -r requirements
 	docker build -t kraken:$(shell cat kraken/__version__.py | cut -d"=" -f2| sed 's/\"//g'|sed 's/\ //g') .
+	docker tag kraken:$(shell cat kraken/__version__.py | cut -d"=" -f2| sed 's/\"//g'|sed 's/\ //g') kraken:latest
+
+docker-push:
+	docker tag kraken:latest m4ucorp/plataformas-kraken:latest
+	docker push m4ucorp/plataformas-kraken
 
 test:
 	docker run --rm -v $(shell pwd):/worker -e "PYTHONPATH=/worker/packages" -w /worker iron/python:3 python3 -m kraken
@@ -21,4 +28,3 @@ clean:
 	find . -name *.pyc |xargs -I {} sudo rm -rf {}
 	sudo rm -rf packages
 
-all: virtualenv install

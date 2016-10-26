@@ -4,4 +4,10 @@
 
 # EBS
 
+- clean snapshots
 - create unit tests
+
+# AMI
+
+- clean old ami
+- list ami without any instances running it

@@ -6,7 +6,7 @@ setup(
     version=version.__version__,
     py_modules=['kraken'],
     packages=find_packages(),
-    url='bitbucket.org/leopepe/kraken',
+    url='http://bitbucket.org/leopepe/kraken',
     license='Simplified BSD',
     author='Leonardo Pepe',
     author_email='lpepefreitas@gmail.com',
