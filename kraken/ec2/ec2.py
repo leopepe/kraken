@@ -1,4 +1,5 @@
 import boto3
+from ast import literal_eval
 
 
 class EC2Error(RuntimeError):
@@ -33,6 +34,7 @@ class EC2:
             self._session = boto3.session.Session(region_name=self._region_name)
 
         self.ec2 = self._session.resource('ec2')
+        self.images = ec2.images.all()
         self.instances = []
 
     @property
@@ -43,12 +45,12 @@ class EC2:
     def profile_name(self):
         return self._session.profile_name
 
-    def list(self, filters: str = None, state: str = None, exclude: str = None) -> list:
+    def list(self, filters: dict = None, state: str = None, exclude: str = None) -> list:
         """ List instances within a specific state, filter or exclude item
 
         :type state: str
         :param state: possible states: running, stopped
-        :param filters: a literal dict as a string
+        :param filters: a dict string literal_eval {'Name': 'v1', 'Values': 'v2'}
         :param exclude: list of excluded id's
         :return: collection of ec2 instances
         :rtype: list
@@ -56,6 +58,7 @@ class EC2:
         date_format = '%Y-%m-%d %H:%M:%S'
         self.instances = self.ec2.instances.all()
 
+        # TOREMOVE
         def __all_instances():
             # all instances without filtering
             self.instances = [
@@ -78,11 +81,13 @@ class EC2:
                 raise EC2Error('Error listing instances by state {0} {1}'.format(state, e))
 
         if filters:
+            # convert string into dict
+            filters = literal_eval(filters)
             try:
                 if not self.instances:
                     self.instances = self.ec2.instances.all()
 
-                self.instances = self.instances.filter(Filters=filters)
+                self.instances = self.instances.filter(Filters=[{'Name': filters['Name'], 'Values': filters['Values']}])
             except IOError as e:
                 raise EC2Error('Error listing instances with filters {0} {1}'.format(filters, e))
 
@@ -143,6 +148,7 @@ class EC2:
     def terminate(self, ids: list, exclude: list = None) -> str:
         """ Terminate instances based on a list of ids
 
+        :param exclude:
         :param ids:
         :return:
         :rtype: str
@@ -153,7 +159,7 @@ class EC2:
                 status = self.ec2.instances.filter(InstanceIds=ids).terminate()
                 return "Terminated status: {0}, instances:\n {1}".format(ids, status)
             except IOError as e:
-                raise EC2Error('Error terminating EC2 Instances {}'.format(e))
+                raise TerminationError('Error terminating EC2 Instances {}'.format(e))
         else:
             #filtered_ids = list(set(ids) - set(exclude))
             try:
@@ -165,7 +171,7 @@ class EC2:
                         )
                 return "Terminated status: {0}, instances:\n {1}".format(filtered_ids, status)
             except IOError as e:
-                raise EC2Error('Error terminating EC2 Instances {}'.format(e))
+                raise TerminationError('Error terminating EC2 Instances {}'.format(e))
 
 
 if __name__ == '__main__':
