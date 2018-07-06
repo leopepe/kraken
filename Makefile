@@ -1,4 +1,5 @@
 .PHONY: all
+ORG?=leopepe
 
 all: virtualenv install
 
@@ -14,8 +15,8 @@ docker:
 	docker tag kraken:$(shell cat kraken/__version__.py | cut -d"=" -f2| sed 's/\"//g'|sed 's/\ //g') kraken:latest
 
 docker-push:
-	docker tag kraken:latest m4ucorp/plataformas-kraken:latest
-	docker push m4ucorp/plataformas-kraken
+	docker tag kraken:latest ${ORG}/kraken:latest
+	docker push ${ORG}/kraken
 
 test:
 	docker run --rm -v $(shell pwd):/worker -e "PYTHONPATH=/worker/packages" -w /worker iron/python:3 python3 -m kraken
