@@ -1,20 +1,20 @@
 .PHONY: all
 ORG?=leopepe
 
-all: virtualenv install
+all: config-virtualenv install
 
-virtualenv:
+config-virtualenv:
 	virtualenv -p python3.5 venv/
 	./venv/bin/python -m pip install -r requirements
-install:
+install: config-virtualenv
 	./venv/bin/python setup.py install
 
-docker:
+docker-build:
 	docker run --rm -v $(shell pwd):/worker -w /worker iron/python:3-dev pip install -t packages -r requirements
 	docker build -t kraken:$(shell cat kraken/__version__.py | cut -d"=" -f2| sed 's/\"//g'|sed 's/\ //g') .
 	docker tag kraken:$(shell cat kraken/__version__.py | cut -d"=" -f2| sed 's/\"//g'|sed 's/\ //g') kraken:latest
 
-docker-push:
+docker-push: docker-build
 	docker tag kraken:latest ${ORG}/kraken:latest
 	docker push ${ORG}/kraken
 
