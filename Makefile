@@ -4,7 +4,7 @@ ORG?=leopepe
 all: config-virtualenv install
 
 config-virtualenv:
-	virtualenv -p python3.5 venv/
+	virtualenv -p python3 venv/
 	./venv/bin/python -m pip install -r requirements
 install: config-virtualenv
 	./venv/bin/python setup.py install
